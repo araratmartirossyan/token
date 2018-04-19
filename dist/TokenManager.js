@@ -42,13 +42,7 @@ class TokenManager {
         }
         this.isRefreshing = true;
         this.isRefreshingFailed = false;
-        const tokenPair = this.tokenPair;
-        const tokenRefresher = Observable_1.Observable.create((observer) => {
-            this.tokenRefresher(tokenPair)
-                .then(tokenPair => observer.next(tokenPair))
-                .catch(error => observer.error(error));
-        });
-        return tokenRefresher
+        return this.tokenRefresher(this.tokenPair)
             .retry(2)
             .catch(() => {
             this.isRefreshingFailed = true;

@@ -59,15 +59,7 @@ export class TokenManager {
         this.isRefreshing = true;
         this.isRefreshingFailed = false;
 
-        const tokenPair = this.tokenPair;
-
-        const tokenRefresher = Observable.create((observer: Observer<TokenPair>) => {
-            this.tokenRefresher(tokenPair)
-                .then(tokenPair => observer.next(tokenPair))
-                .catch(error => observer.error(error));
-        });
-
-        return tokenRefresher
+        return this.tokenRefresher(this.tokenPair)
             .retry(2)
             .catch(() => {
                 this.isRefreshingFailed = true;

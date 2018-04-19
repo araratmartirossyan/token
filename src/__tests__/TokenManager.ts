@@ -12,7 +12,7 @@ import { EmptyObservable } from 'rxjs/Observable/EmptyObservable';
 
 describe('Token Manager', () => {
 
-    const emptyTokenRefresher = () => new Promise<TokenPair>(undefined);
+    const emptyTokenRefresher = () => new Observable<TokenPair>(undefined);
 
     it('Initial tokens must be empty', (done) => {
         const tokenManager = new TokenManager(emptyTokenRefresher);
@@ -59,9 +59,9 @@ describe('Token Manager', () => {
         const refreshedAccessToken = 'jhauenw22355345s';
         const refreshedRefreshToken = 'sdjfwer8q990wwerl';
 
-        const tokenRefresher = () => new Promise<TokenPair>(resolve => {
+        const tokenRefresher = () => new Observable<TokenPair>((observer) => {
             setInterval(() => {
-                resolve({ accessToken: refreshedAccessToken, refreshToken: refreshedRefreshToken });
+                observer.next({ accessToken: refreshedAccessToken, refreshToken: refreshedRefreshToken });
             }, 0.2);
         });
 
@@ -90,16 +90,18 @@ describe('Token Manager', () => {
 
         const counter = { refreshingCount: 0 };
 
-        const tokenRefresher = () => new Promise<TokenPair>((resolve, reject) => {
+        const tokenRefresher = () => new Observable<TokenPair>((observer) => {
             Observable
                 .timer(0.1)
                 .subscribe(() => {
                     if (counter.refreshingCount >= 1) {
                         counter.refreshingCount++;
-                        resolve({ accessToken: refreshedAccessToken, refreshToken: refreshedRefreshToken });
+
+                        observer.next({ accessToken: refreshedAccessToken, refreshToken: refreshedRefreshToken });
+                        observer.complete();
                     } else {
                         counter.refreshingCount++;
-                        reject('Error on refreshing tokens');
+                        observer.error('Error on refreshing tokens');
                     }
                 });
         });
@@ -120,9 +122,9 @@ describe('Token Manager', () => {
     it('Should return same tokens on multiple refrefing requests', (done) => {
         const randomToken = () => uuid() as string;
 
-        const tokenRefresher = () => new Promise<TokenPair>(resolve => {
+        const tokenRefresher = () => new Observable<TokenPair>(observer => {
             setInterval(() => {
-                resolve({ accessToken: randomToken(), refreshToken: randomToken() });
+                observer.next({ accessToken: randomToken(), refreshToken: randomToken() });
             }, 0.2);
         });
 
@@ -161,9 +163,9 @@ describe('Token Manager', () => {
         const refreshedAccessToken = 'jhauenw22355345s';
         const refreshedRefreshToken = 'sdjfwer8q990wwerl';
 
-        const tokenRefresher = () => new Promise<TokenPair>((resolve, reject) => {
+        const tokenRefresher = () => new Observable<TokenPair>((observer) => {
             setInterval(() => {
-                resolve({ accessToken: refreshedAccessToken, refreshToken: refreshedRefreshToken });
+                observer.next({ accessToken: refreshedAccessToken, refreshToken: refreshedRefreshToken });
             }, 0.2);
         });
 
@@ -182,8 +184,8 @@ describe('Token Manager', () => {
     });
 
     it('Should throw Token Refreshing Error if server unavailable', (done) => {
-        const tokenRefresher = () => new Promise<TokenPair>((resolve, reject) => {
-            reject('Server unavailable');
+        const tokenRefresher = () => new Observable<TokenPair>((observer) => {
+            observer.error('Server unavailable');
         });
 
         const tokenManager = new TokenManager(tokenRefresher);
