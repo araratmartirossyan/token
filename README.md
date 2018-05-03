@@ -4,7 +4,9 @@
 # Установка 
 **1. Склонировать репозиторий в папку рядом с разрабатываемым проектом** 
  
-`$ git clone https://gitlab.ops.xn--90aflpmbkdt4g.xn--p1ai/mdt/packages/token-manager.git` 
+`$ git clone https://gitlab.ops.mir-dobro-ti.ru/mdt/packages/token-manager.git`
+
+`$ git checkout dev`
  
 **2. Слинковать библиотеку с проектом**
  
