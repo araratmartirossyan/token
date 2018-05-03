@@ -12,7 +12,8 @@ require("rxjs/add/operator/do");
 const TokenRefreshingError_1 = require("./TokenRefreshingError");
 class TokenManager {
     constructor(tokenRefresher, tokenPair) {
-        this.onTokensRefreshed = new ReplaySubject_1.ReplaySubject();
+        this.onTokenPairRefreshed = new ReplaySubject_1.ReplaySubject();
+        this.onTokenPairRefreshingFailed = new ReplaySubject_1.ReplaySubject();
         this.isRefreshing = false;
         this.isRefreshingFailed = false;
         this.tokenRefresher = tokenRefresher;
@@ -28,15 +29,21 @@ class TokenManager {
             return this.refreshTokens();
         }
         if (this.isRefreshing) {
-            return this.onTokensRefreshed
+            return this.onTokenPairRefreshed
                 .asObservable()
                 .take(1);
         }
         return Observable_1.Observable.of(this.tokenPair);
     }
+    onTokensRefreshed() {
+        return this.onTokenPairRefreshed.asObservable();
+    }
+    onTokensRefreshingFailed() {
+        return this.onTokenPairRefreshingFailed.asObservable();
+    }
     refreshTokens() {
         if (!this.isRefreshingFailed && this.isRefreshing) {
-            return this.onTokensRefreshed
+            return this.onTokenPairRefreshed
                 .asObservable()
                 .take(1);
         }
@@ -46,14 +53,16 @@ class TokenManager {
             .retry(2)
             .catch(() => {
             this.isRefreshingFailed = true;
-            return Observable_1.Observable.throw(new TokenRefreshingError_1.TokenRefreshingError());
+            const error = new TokenRefreshingError_1.TokenRefreshingError();
+            this.onTokenPairRefreshingFailed.next({});
+            return Observable_1.Observable.throw(error);
         })
             .do(tokens => this.onTokensRefreshingCompleted(tokens));
     }
     onTokensRefreshingCompleted(tokenPair) {
         this.isRefreshingFailed = false;
         this.tokenPair = tokenPair;
-        this.onTokensRefreshed.next(tokenPair);
+        this.onTokenPairRefreshed.next(tokenPair);
         this.isRefreshing = false;
     }
 }

@@ -10,13 +10,16 @@ import { TokenRefresher } from './TokenRefresher';
 import { TokenPair } from './TokenPair';
 export declare class TokenManager {
     private readonly tokenRefresher;
-    private readonly onTokensRefreshed;
+    private readonly onTokenPairRefreshed;
+    private readonly onTokenPairRefreshingFailed;
     private tokenPair;
     private isRefreshing;
     private isRefreshingFailed;
     constructor(tokenRefresher: TokenRefresher, tokenPair?: TokenPair);
     updateTokens(tokenPair: TokenPair): void;
     getTokens(): Observable<TokenPair>;
+    onTokensRefreshed(): Observable<TokenPair>;
+    onTokensRefreshingFailed(): Observable<{}>;
     refreshTokens(): Observable<TokenPair>;
     private onTokensRefreshingCompleted(tokenPair);
 }

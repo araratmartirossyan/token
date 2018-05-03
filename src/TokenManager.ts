@@ -17,7 +17,8 @@ import { Observer } from 'rxjs/Observer';
 export class TokenManager {
 
     private readonly tokenRefresher: TokenRefresher;
-    private readonly onTokensRefreshed = new ReplaySubject<TokenPair>();
+    private readonly onTokenPairRefreshed = new ReplaySubject<TokenPair>();
+    private readonly onTokenPairRefreshingFailed = new ReplaySubject();
 
     private tokenPair: TokenPair;
     private isRefreshing: boolean = false;
@@ -41,7 +42,7 @@ export class TokenManager {
         }
 
         if (this.isRefreshing) {
-            return this.onTokensRefreshed
+            return this.onTokenPairRefreshed
                 .asObservable()
                 .take(1);
         }
@@ -49,9 +50,17 @@ export class TokenManager {
         return Observable.of(this.tokenPair);
     }
 
+    onTokensRefreshed(): Observable<TokenPair> {
+        return this.onTokenPairRefreshed.asObservable();
+    }
+
+    onTokensRefreshingFailed(): Observable<{}> {
+        return this.onTokenPairRefreshingFailed.asObservable();
+    }
+
     refreshTokens(): Observable<TokenPair> {
         if (!this.isRefreshingFailed && this.isRefreshing) {
-            return this.onTokensRefreshed
+            return this.onTokenPairRefreshed
                 .asObservable()
                 .take(1);
         }
@@ -63,7 +72,11 @@ export class TokenManager {
             .retry(2)
             .catch(() => {
                 this.isRefreshingFailed = true;
-                return Observable.throw(new TokenRefreshingError());
+
+                const error = new TokenRefreshingError();
+                this.onTokenPairRefreshingFailed.next({});
+
+                return Observable.throw(error);
             })
             .do(tokens => this.onTokensRefreshingCompleted(tokens));
     }
@@ -72,7 +85,7 @@ export class TokenManager {
         this.isRefreshingFailed = false;
 
         this.tokenPair = tokenPair;
-        this.onTokensRefreshed.next(tokenPair);
+        this.onTokenPairRefreshed.next(tokenPair);
 
         this.isRefreshing = false;
     }

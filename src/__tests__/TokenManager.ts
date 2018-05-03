@@ -1,5 +1,4 @@
 import { Observable } from 'rxjs/Observable';
-import { Observer } from 'rxjs/Observer';
 
 import 'rxjs/add/observable/combineLatest';
 import 'rxjs/add/observable/timer';
@@ -8,7 +7,6 @@ import 'rxjs/add/observable/empty';
 import { TokenRefreshingError } from '../TokenRefreshingError';
 import { TokenManager } from '../TokenManager';
 import { TokenPair } from '../TokenPair';
-import { EmptyObservable } from 'rxjs/Observable/EmptyObservable';
 
 describe('Token Manager', () => {
 
