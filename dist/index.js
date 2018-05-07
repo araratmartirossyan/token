@@ -6,8 +6,8 @@ require("rxjs/add/operator/take");
 require("rxjs/add/operator/retry");
 require("rxjs/add/operator/catch");
 require("rxjs/add/operator/do");
-var TokenManager_1 = require("./TokenManager");
-exports.TokenManager = TokenManager_1.TokenManager;
+var RxTokenManager_1 = require("./RxTokenManager");
+exports.RxTokenManager = RxTokenManager_1.RxTokenManager;
 var TokenRefreshingError_1 = require("./TokenRefreshingError");
 exports.TokenRefreshingError = TokenRefreshingError_1.TokenRefreshingError;
 //# sourceMappingURL=index.js.map

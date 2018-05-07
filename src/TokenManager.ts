@@ -1,92 +1,54 @@
 import { Observable } from 'rxjs/Observable';
-import { ReplaySubject } from 'rxjs/ReplaySubject';
-
-import 'rxjs/add/observable/of';
-import 'rxjs/add/observable/throw';
-import 'rxjs/add/observable/fromPromise';
-import 'rxjs/add/operator/take';
-import 'rxjs/add/operator/retry';
-import 'rxjs/add/operator/catch';
-import 'rxjs/add/operator/do';
-
-import { TokenRefreshingError } from './TokenRefreshingError';
-import { TokenRefresher } from './TokenRefresher';
-import { TokenPair } from './TokenPair';
 import { Observer } from 'rxjs/Observer';
+import { RxTokenManager } from './RxTokenManager';
+import { TokenPair } from './TokenPair';
+import { TokenRefresher } from './TokenRefresher';
 
 export class TokenManager {
 
-    private readonly tokenRefresher: TokenRefresher;
-    private readonly onTokenPairRefreshed = new ReplaySubject<TokenPair>();
-    private readonly onTokenPairRefreshingFailed = new ReplaySubject();
-
-    private tokenPair: TokenPair;
-    private isRefreshing: boolean = false;
-    private isRefreshingFailed: boolean = false;
+    private readonly tokenManager: RxTokenManager;
 
     constructor(tokenRefresher: TokenRefresher, tokenPair?: TokenPair) {
-        this.tokenRefresher = tokenRefresher;
-        this.tokenPair = tokenPair || { accessToken: '', refreshToken: '' };
+        const rxTokenRefresher = (tokenPair: TokenPair) => {
+            return Observable.create((observer: Observer<TokenPair>) => {
+                tokenRefresher(tokenPair)
+                    .then((pair) => {
+                        observer.next(pair);
+                    })
+                    .catch(error => {
+                        observer.error(error);
+                    });
+            });
+        };
+
+        this.tokenManager = new RxTokenManager(rxTokenRefresher, tokenPair);
     }
 
     updateTokens(tokenPair: TokenPair) {
-        this.isRefreshingFailed = false;
-        this.isRefreshing = false;
-
-        this.tokenPair = tokenPair;
+        this.tokenManager.updateTokens(tokenPair);
     }
 
-    getTokens(): Observable<TokenPair> {
-        if (this.isRefreshingFailed) {
-            return this.refreshTokens();
-        }
-
-        if (this.isRefreshing) {
-            return this.onTokenPairRefreshed
-                .asObservable()
-                .take(1);
-        }
-
-        return Observable.of(this.tokenPair);
+    getTokens(): Promise<TokenPair> {
+        return new Promise<TokenPair>((resolve, reject) => {
+            this.tokenManager
+                .getTokens()
+                .subscribe(resolve, reject);
+        });
     }
 
-    onTokensRefreshed(): Observable<TokenPair> {
-        return this.onTokenPairRefreshed.asObservable();
+    onTokensRefreshingFailed(): Promise<{}> {
+        return new Promise(resolve => {
+            this.tokenManager
+                .onTokensRefreshingFailed()
+                .subscribe(resolve);
+        });
     }
 
-    onTokensRefreshingFailed(): Observable<{}> {
-        return this.onTokenPairRefreshingFailed.asObservable();
-    }
-
-    refreshTokens(): Observable<TokenPair> {
-        if (!this.isRefreshingFailed && this.isRefreshing) {
-            return this.onTokenPairRefreshed
-                .asObservable()
-                .take(1);
-        }
-
-        this.isRefreshing = true;
-        this.isRefreshingFailed = false;
-
-        return this.tokenRefresher(this.tokenPair)
-            .retry(2)
-            .catch(() => {
-                this.isRefreshingFailed = true;
-
-                const error = new TokenRefreshingError();
-                this.onTokenPairRefreshingFailed.next({});
-
-                return Observable.throw(error);
-            })
-            .do(tokens => this.onTokensRefreshingCompleted(tokens));
-    }
-
-    private onTokensRefreshingCompleted(tokenPair: TokenPair) {
-        this.isRefreshingFailed = false;
-
-        this.tokenPair = tokenPair;
-        this.onTokenPairRefreshed.next(tokenPair);
-
-        this.isRefreshing = false;
+    refreshTokens(): Promise<TokenPair> {
+       return new Promise<TokenPair>((resolve, reject) => {
+           this.tokenManager
+               .refreshTokens()
+               .subscribe(resolve, reject);
+       });
     }
 }

@@ -1,69 +1,45 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const Observable_1 = require("rxjs/Observable");
-const ReplaySubject_1 = require("rxjs/ReplaySubject");
-require("rxjs/add/observable/of");
-require("rxjs/add/observable/throw");
-require("rxjs/add/observable/fromPromise");
-require("rxjs/add/operator/take");
-require("rxjs/add/operator/retry");
-require("rxjs/add/operator/catch");
-require("rxjs/add/operator/do");
-const TokenRefreshingError_1 = require("./TokenRefreshingError");
+const RxTokenManager_1 = require("./RxTokenManager");
 class TokenManager {
     constructor(tokenRefresher, tokenPair) {
-        this.onTokenPairRefreshed = new ReplaySubject_1.ReplaySubject();
-        this.onTokenPairRefreshingFailed = new ReplaySubject_1.ReplaySubject();
-        this.isRefreshing = false;
-        this.isRefreshingFailed = false;
-        this.tokenRefresher = tokenRefresher;
-        this.tokenPair = tokenPair || { accessToken: '', refreshToken: '' };
+        const rxTokenRefresher = (tokenPair) => {
+            return Observable_1.Observable.create((observer) => {
+                tokenRefresher(tokenPair)
+                    .then((pair) => {
+                    observer.next(pair);
+                })
+                    .catch(error => {
+                    observer.error(error);
+                });
+            });
+        };
+        this.tokenManager = new RxTokenManager_1.RxTokenManager(rxTokenRefresher, tokenPair);
     }
     updateTokens(tokenPair) {
-        this.isRefreshingFailed = false;
-        this.isRefreshing = false;
-        this.tokenPair = tokenPair;
+        this.tokenManager.updateTokens(tokenPair);
     }
     getTokens() {
-        if (this.isRefreshingFailed) {
-            return this.refreshTokens();
-        }
-        if (this.isRefreshing) {
-            return this.onTokenPairRefreshed
-                .asObservable()
-                .take(1);
-        }
-        return Observable_1.Observable.of(this.tokenPair);
-    }
-    onTokensRefreshed() {
-        return this.onTokenPairRefreshed.asObservable();
+        return new Promise((resolve, reject) => {
+            this.tokenManager
+                .getTokens()
+                .subscribe(resolve, reject);
+        });
     }
     onTokensRefreshingFailed() {
-        return this.onTokenPairRefreshingFailed.asObservable();
+        return new Promise(resolve => {
+            this.tokenManager
+                .onTokensRefreshingFailed()
+                .subscribe(resolve);
+        });
     }
     refreshTokens() {
-        if (!this.isRefreshingFailed && this.isRefreshing) {
-            return this.onTokenPairRefreshed
-                .asObservable()
-                .take(1);
-        }
-        this.isRefreshing = true;
-        this.isRefreshingFailed = false;
-        return this.tokenRefresher(this.tokenPair)
-            .retry(2)
-            .catch(() => {
-            this.isRefreshingFailed = true;
-            const error = new TokenRefreshingError_1.TokenRefreshingError();
-            this.onTokenPairRefreshingFailed.next({});
-            return Observable_1.Observable.throw(error);
-        })
-            .do(tokens => this.onTokensRefreshingCompleted(tokens));
-    }
-    onTokensRefreshingCompleted(tokenPair) {
-        this.isRefreshingFailed = false;
-        this.tokenPair = tokenPair;
-        this.onTokenPairRefreshed.next(tokenPair);
-        this.isRefreshing = false;
+        return new Promise((resolve, reject) => {
+            this.tokenManager
+                .refreshTokens()
+                .subscribe(resolve, reject);
+        });
     }
 }
 exports.TokenManager = TokenManager;
